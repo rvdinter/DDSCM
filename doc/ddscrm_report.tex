@@ -21,18 +21,18 @@
 %%
 %%
 %%
-%% $Id: elsarticle-template-harv.tex 4 2009-10-24 08:22:58Z rishi $
+%% $Id: ddscrm_report.tex 4 2009-10-24 08:22:58Z rishi $
 %%
 %%
-\documentclass[preprint,authoryear,12pt]{elsarticle}
+%%\documentclass[preprint,authoryear,12pt]{elsarticle}
 
 %% Use the option review to obtain double line spacing
 %% \documentclass[authoryear,preprint,review,12pt]{elsarticle}
 
 %% Use the options 1p,twocolumn; 3p; 3p,twocolumn; 5p; or 5p,twocolumn
 %% for a journal layout:
-%% \documentclass[final,authoryear,1p,times]{elsarticle}
-%% \documentclass[final,authoryear,1p,times,twocolumn]{elsarticle}
+%%\documentclass[final,authoryear,1p,times]{elsarticle}
+\documentclass[final,authoryear,1p,times,twocolumn]{elsarticle}
 %% \documentclass[final,authoryear,3p,times]{elsarticle}
 %% \documentclass[final,authoryear,3p,times,twocolumn]{elsarticle}
 %% \documentclass[final,authoryear,5p,times]{elsarticle}
@@ -79,8 +79,14 @@
 
 % \biboptions{}
 
-\journal{Nuclear Physics B}
-
+%\journal{Nuclear Physics B}
+\makeatletter
+\def\ps@pprintTitle{%
+ \let\@oddhead\@empty
+ \let\@evenhead\@empty
+ \def\@oddfoot{}%
+ \let\@evenfoot\@oddfoot}
+\makeatother
 \begin{document}
 
 \begin{frontmatter}
@@ -106,20 +112,19 @@
 %% \address{Address\fnref{label3}}
 %% \fntext[label3]{}
 
-\title{}
+\title{Simulation of Perishable Products}
 
 %% use optional labels to link authors explicitly to addresses:
 %% \author[label1,label2]{<author name>}
 %% \address[label1]{<address>}
 %% \address[label2]{<address>}
 
-\author{}
-
-\address{}
+\author{Raymon van Dinter}
+%\ead{r.dinter.rvd@gmail.com}
+\address{Wageningen University and Research}
 
 \begin{abstract}
 %% Text of abstract
-
 \end{abstract}
 
 \begin{keyword}
@@ -135,8 +140,8 @@
 % \linenumbers
 
 %% main text
-\section{}
-\label{}
+\section{Introduction}
+\label{sec:introduction}
 
 %% The Appendices part is started with the command \appendix;
 %% appendix sections are then done as normal sections
@@ -191,8 +196,8 @@
 
 %% References with bibTeX database:
 
-\bibliographystyle{elsarticle-harv}
-\bibliography{<your-bib-database>}
+%\bibliographystyle{elsarticle-harv}
+%\bibliography{<your-bib-database>}
 
 %% Authors are advised to submit their bibtex database files. They are
 %% requested to list a bibtex style file in the manuscript if they do
@@ -221,4 +226,4 @@
 \end{document}
 
 %%
-%% End of file `elsarticle-template-harv.tex'.
+%% End of file `ddscrm_report.tex'.
