@@ -244,3 +244,5 @@ if __name__ == '__main__':
     run_sim_ml_dataset(lr, demand_weather_14_17, plot=False)
     # Only differation was that MLP had a 0.001 lower waste rate than LR, therefore, MLP is performing best,
     # but it is not easily explainable.
+    
+    # @TODO: run the last simulation on all datasets to find differences, play with ss value to reduce waste
