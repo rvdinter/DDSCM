@@ -32,11 +32,11 @@
 %% Use the options 1p,twocolumn; 3p; 3p,twocolumn; 5p; or 5p,twocolumn
 %% for a journal layout:
 %%\documentclass[final,authoryear,1p,times]{elsarticle}
-\documentclass[final,authoryear,1p,times,twocolumn]{elsarticle}
+%\documentclass[final,authoryear,1p,times,twocolumn]{elsarticle}
 %% \documentclass[final,authoryear,3p,times]{elsarticle}
 %% \documentclass[final,authoryear,3p,times,twocolumn]{elsarticle}
 %% \documentclass[final,authoryear,5p,times]{elsarticle}
-%% \documentclass[final,authoryear,5p,times,twocolumn]{elsarticle}
+\documentclass[final,authoryear,5p,times,twocolumn]{elsarticle}
 
 %% if you use PostScript figures in your article
 %% use the graphics package for simple commands
@@ -48,6 +48,8 @@
 
 %% The amssymb package provides various useful mathematical symbols
 \usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{tabularx}
 %% The amsthm package provides extended theorem environments
 %% \usepackage{amsthm}
 
@@ -121,7 +123,7 @@
 
 \author{Raymon van Dinter}
 %\ead{r.dinter.rvd@gmail.com}
-\address{Wageningen University and Research}
+\address{ORL-33806\\Data Driven Supply Chain Management\\Wageningen University and Research}
 
 \begin{abstract}
 %% Text of abstract
@@ -129,7 +131,7 @@
 
 \begin{keyword}
 %% keywords here, in the form: keyword \sep keyword
-
+Data Driven Supply Chain Management \sep Machine Learning \sep Deep Learning \sep Regression
 %% MSC codes here, in the form: \MSC code \sep code
 %% or \MSC[2008] code \sep code (2000 is the default)
 
@@ -142,6 +144,61 @@
 %% main text
 \section{Introduction}
 \label{sec:introduction}
+Retailers that sell perishable products should manage their supply chain in order to have the least amount or waste or
+shortages as possible. A retailer in barbecue products was selected for this assignment. This retailer recorded its
+demand data for the years 2014 to 2017. An attempt to improve demand prediction was sought after using machine learning
+models, weather data from KNMI and demand data. This attempt was compared against a simulation model using a mean
+average of the preceding weekdays.
+
+\section{Prediction models}
+\label{sec:models}
+All demand prediction models are elaborated in this section.
+\subsection{Analysis and Choice}
+%TODO Analysis and choice of prediction models
+In order to predict forecast demand, several prediction models were created. These models included:
+\begin{itemize}[noitemsep]
+ \item Constant demand
+ \item Mean average
+ \item Linear regression
+ \item Decision tree regression
+ \item Support vector regression
+ \item Random forest regression
+ \item Gradient boosting regression
+ \item Multi-layer perceptron regression
+\end{itemize}
+\subsection{Parameter settings}
+%TODO Prediction model and param settings
+In order to efficiently evaluate each machine learning model, the \texttt{GridSearchCV} object from the \texttt{sklearn} library has been used. Parameters for each of these models have been shown in
+\begin{table}[ht]
+\begin{tabularx}{\columnwidth}{ll}
+\hline
+Model                             & Parameter values                                                                                                  \\ \hline
+Linear regression                 & \{'normalize': False\}                                                                                            \\
+Decision tree regression          & \{'max\_depth': 13, 'random\_state': 0\}                                                                          \\
+Support vector regression         & \{'C': 100, 'gamma': 0.01\}                                                                                       \\
+Random forest regression          & \{'max\_depth': 8, 'max\_features': 'auto', 'n\_estimators': 500, 'random\_state': 0\}                            \\
+Gradient boosting regression      & \{'learning\_rate': 0.1, 'max\_depth': 5, 'random\_state': 0\}                                                    \\
+Multi-layer perceptron regression & \{'alpha': 1e-06, 'hidden\_layer\_sizes': {[}10{]}, 'max\_iter': 1000000, 'solver': 'lbfgs, 'random\_state': 0'\} \\ \hline
+\end{tabularx}
+\caption{Model Parameters}
+\label{tab:params}
+\end{table}
+
+\subsection{Quantitative comparison}
+%TODO Quantitative comparison of the models
+
+\subsection{Impact of including weather info}
+%TODO Discuss impact of including weather info
+
+\section{Results}
+\label{sec:results}
+%TODO Model reports on RMSE on train and test set
+%TODO report relative fill and waste rate
+
+\section{Conclusions and Recommendations}
+\label{sec:conclusion}
+
+
 
 %% The Appendices part is started with the command \appendix;
 %% appendix sections are then done as normal sections
