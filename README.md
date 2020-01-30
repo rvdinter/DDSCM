@@ -1,2 +1,2 @@
 # ddscm
-Code written for the Data Driven Supply Chain Management course
+Code and documentation developed for the Data Driven Supply Chain Management course
