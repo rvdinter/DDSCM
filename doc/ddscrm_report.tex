@@ -36,7 +36,7 @@
 %% \documentclass[final,authoryear,3p,times]{elsarticle}
 %% \documentclass[final,authoryear,3p,times,twocolumn]{elsarticle}
 %% \documentclass[final,authoryear,5p,times]{elsarticle}
-\documentclass[final,authoryear,5p,times,twocolumn]{elsarticle}
+\documentclass[final,authoryear,5p,times,twocolumn, 12pt]{elsarticle}
 
 %% if you use PostScript figures in your article
 %% use the graphics package for simple commands
@@ -50,6 +50,7 @@
 \usepackage{amssymb}
 \usepackage{enumitem}
 \usepackage{tabularx}
+\usepackage{multicol}
 %% The amsthm package provides extended theorem environments
 %% \usepackage{amsthm}
 
@@ -114,7 +115,7 @@
 %% \address{Address\fnref{label3}}
 %% \fntext[label3]{}
 
-\title{Simulation of Perishable Products}
+\title{Forecasting Demand of Perishable Products Using Machine Learning}
 
 %% use optional labels to link authors explicitly to addresses:
 %% \author[label1,label2]{<author name>}
@@ -144,18 +145,33 @@ Data Driven Supply Chain Management \sep Machine Learning \sep Deep Learning \se
 %% main text
 \section{Introduction}
 \label{sec:introduction}
-Retailers that sell perishable products should manage their supply chain in order to have the least amount or waste or
-shortages as possible. A retailer in barbecue products was selected for this assignment. This retailer recorded its
-demand data for the years 2014 to 2017. An attempt to improve demand prediction was sought after using machine learning
-models, weather data from KNMI and demand data. This attempt was compared against a simulation model using a mean
-average of the preceding weekdays.
+Retailers that sell perishable products should manage their supply chain in order to have the least amount or waste or shortages as possible. A retailer in barbecue products was selected to be further investigated. This retailer recorded its demand on perishable products for 4 years. A model was created to simulate the operation of common retailers handling with perishable products. An attempt to improve usual demand prediction was sought after using machine learning models, fit with features of weather data from the Royal Dutch Meteorological Institute (KNMI), and with demand targets.
 
+\section{Retailer simulation}
+In order to investigate the operation of a common retailer of perishable products, a quantitative model was developed. This model kept in mind a daily routine:
+\begin{itemize}[]
+	\item At the start of every day, the order up to level \textit{S} will be set by predicting demand \textit{D}. There are various methods to calculate \textit{S}, which will be explained later in this section.
+	\item Order quantity \textit{Q} is determined by subtracting the daily starting inventory \textit{I} from \textit{S}.
+	\item During the day, customers buy products. This demand is subtracted FIFO-wise from \textit{I}. If demand is higher than stock, a shortage is counted.
+	\item Next day starting inventory \textit{I} is determined by adding \textit{Q} to \textit{I} FIFO-wise.
+	\item Waste is computed by counting the expired products.
+	\item At the end of the iteration, average shortage and waste are computed.
+\end{itemize}
+\subsection{Determining D}
+In this simulation model, two methods of determining demand \textit{D} were implemented. The first method was simulating \textit{D}, the second was using a manual input (a \texttt{list}), which could be a predicted \textit{D} using a machine learning model.
+
+\subsection{Computation of S}
+Order up to level \textit{S} was computed by using the formula: 
+\begin{equation}
+S = \mu_{R+L} + z(\sigma_{R+L})
+\end{equation}
+Where \textit{R} means the daily ordering and \textit{L} stands for the lead time. $\mu_{R+L}$ is the demand over $R+L$ days, where $z(\sigma_{R+L})$ is a safety stock that is added to the expected demand over review period plus lead time. 
 \section{Prediction models}
 \label{sec:models}
 All demand prediction models are elaborated in this section.
 \subsection{Analysis and Choice}
 %TODO Analysis and choice of prediction models
-In order to predict forecast demand, several prediction models were created. These models included:
+In order to forecast demand, several prediction models were created. These models included:
 \begin{itemize}[noitemsep]
  \item Constant demand
  \item Mean average
@@ -169,8 +185,8 @@ In order to predict forecast demand, several prediction models were created. The
 \subsection{Parameter settings}
 %TODO Prediction model and param settings
 In order to efficiently evaluate each machine learning model, the \texttt{GridSearchCV} object from the \texttt{sklearn} library has been used. Parameters for each of these models have been shown in
-\begin{table}[ht]
-\begin{tabularx}{\columnwidth}{ll}
+\begin{table}[b]
+\begin{tabular}{p{0.5\columnwidth}p{0.5\columnwidth}}
 \hline
 Model                             & Parameter values                                                                                                  \\ \hline
 Linear regression                 & \{'normalize': False\}                                                                                            \\
@@ -179,7 +195,7 @@ Support vector regression         & \{'C': 100, 'gamma': 0.01\}                 
 Random forest regression          & \{'max\_depth': 8, 'max\_features': 'auto', 'n\_estimators': 500, 'random\_state': 0\}                            \\
 Gradient boosting regression      & \{'learning\_rate': 0.1, 'max\_depth': 5, 'random\_state': 0\}                                                    \\
 Multi-layer perceptron regression & \{'alpha': 1e-06, 'hidden\_layer\_sizes': {[}10{]}, 'max\_iter': 1000000, 'solver': 'lbfgs, 'random\_state': 0'\} \\ \hline
-\end{tabularx}
+\end{tabular}
 \caption{Model Parameters}
 \label{tab:params}
 \end{table}

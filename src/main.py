@@ -13,16 +13,17 @@ from math import sqrt
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, SGDRegressor
+from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import GridSearchCV
 from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
-from sklearn.svm import SVR
+from sklearn.svm import LinearSVR
 
-from src.demand_forecast_simulator import DemandForecastSimulator
+from demand_forecast_simulator import DemandForecastSimulator
 
 
 def ignore_warnings():
@@ -33,7 +34,7 @@ def ignore_warnings():
     warnings.filterwarnings("ignore")
 
 
-def set_cwd(cwd='M:\WUR\Year_1\DDSCM'):
+def set_cwd(cwd='D:\Academy\WUR\\Year_1\ddscm\src'):
     """
     Set current working directory, used in-class to enable easy data loading
     :param cwd: string of current working directory
@@ -159,10 +160,18 @@ def evaluate_models(train_df, test_df):
     X_train_scaled, y_train, X_test_scaled, y_test = preprocess_train_test(train_df, test_df)
 
     # Apply Gridsearch method to find the best parameters and their RMSE
-    models = [LinearRegression(), DecisionTreeRegressor(), SVR(), RandomForestRegressor(), GradientBoostingRegressor(), MLPRegressor()]
+    models = [LinearRegression(), Ridge(), Lasso(), SGDRegressor(), 
+              GaussianNB(), DecisionTreeRegressor(), LinearSVR(), 
+              RandomForestRegressor(), GradientBoostingRegressor(), 
+              MLPRegressor()]
+    
     parameters = [{'normalize': [False, True]},
+                   {'alpha': [0.0001, 0.00001, 1, 10]},
+                   {'alpha': [0.0001, 0.00001, 1, 10]},
+                   {'alpha': [0.0000001, 0.00001, 0.0001, 0.001]},
+                   {},
                   {'max_depth': [1, 3, 5, 13, 20, None], 'random_state': [0]},
-                  {'C': [0.001, 0.1, 10, 100], 'gamma': [0.1, 0.01, 10, 100]},
+                  {'C': [0.001, 0.1, 10, 100]},
                   {'n_estimators': [100, 200, 500], 'max_features': ['auto', 'sqrt', 'log2'],
                    'max_depth': [2, 3, 4, 5, 6, 7, 8], 'random_state': [0]},
                   {'learning_rate': [0.001, 0.01, 0.1, 1, 10], 'max_depth': [1, 3, 5], 'random_state': [0]},
@@ -198,15 +207,16 @@ def run_sim_ml_dataset(model, dataframe, plot=False):
     X, y = preprocess_train(dataframe)
     model.fit(X, y)
     demand = model.predict(X)
-
+    
     # Initialize ForecastSimulator model
-    fs = DemandForecastSimulator('ML')
+    fs = DemandForecastSimulator('ML', ss=1.1)
     fs.set_D(demand, 1, TO)
     D, S, Q, I, short, waste, ShortRun, WasteRun = fs.simulate(1, TO)
     print('\n--- %s ---' % model.__class__.__name__)
     report_rmse_fillrun_shortrun(D[0], demand[TW:-TK], ShortRun, WasteRun)
 
     if plot:
+        plt.plot(demand, label='Predicted Demand')
         plt.plot(D[0], label='D')
         plt.plot(S[0], label='S')
         plt.plot(np.sum(I[0], axis=1), label='I')
@@ -220,7 +230,7 @@ if __name__ == '__main__':
     ignore_warnings()
 
     # Adjust current working directory if needed
-    # set_cwd()
+    set_cwd()
 
     # Load data into dataframes
     demand_weather_14_17 = pd.read_excel('data/Data2014-2017DemandWeather.xlsx')
@@ -237,12 +247,18 @@ if __name__ == '__main__':
     evaluate_models(demand_weather_14_16, demand_weather_17)
 
     print('\n\n---- Run the Simulator ----')
-    # MLP and LR performed rather good on evaluate_models, therefore we test them on the simulation
-    mlp = MLPRegressor(alpha=0.000001, hidden_layer_sizes=[10], random_state=0, solver='lbfgs')
+    # MLP and Linear models performed rather good on evaluate_models, therefore we test them on the simulation
+    mlp = MLPRegressor(alpha=0.00001, hidden_layer_sizes=[10], random_state=0, solver='lbfgs')
     lr = LinearRegression()
-    run_sim_ml_dataset(mlp, demand_weather_14_17, plot=False)
-    run_sim_ml_dataset(lr, demand_weather_14_17, plot=False)
-    # Only differation was that MLP had a 0.001 lower waste rate than LR, therefore, MLP is performing best,
-    # but it is not easily explainable.
-    
-    # @TODO: run the last simulation on all datasets to find differences, play with ss value to reduce waste
+    lasso = Lasso(alpha=0.0001)
+    ridge = Ridge(alpha=1e-5)
+    svr = LinearSVR(C = 100)
+    models = [lr, lasso, ridge, svr, mlp]
+    for model in models:
+        run_sim_ml_dataset(model, demand_weather_14_17, plot=False)
+
+# =============================================================================
+# With a ss=1.1, all models score the same. Therefore, I would use Lasso 
+# regression, which has most feature coefficients on 0 and is easily 
+# explainable.
+# =============================================================================
