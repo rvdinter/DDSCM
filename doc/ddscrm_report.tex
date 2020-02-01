@@ -36,7 +36,7 @@
 %% \documentclass[final,authoryear,3p,times]{elsarticle}
 %% \documentclass[final,authoryear,3p,times,twocolumn]{elsarticle}
 %% \documentclass[final,authoryear,5p,times]{elsarticle}
-\documentclass[final,authoryear,5p,times,twocolumn, 12pt]{elsarticle}
+\documentclass[final,authoryear,5p,times,twocolumn, 11pt]{elsarticle}
 
 %% if you use PostScript figures in your article
 %% use the graphics package for simple commands
@@ -48,9 +48,13 @@
 
 %% The amssymb package provides various useful mathematical symbols
 \usepackage{amssymb}
-\usepackage{enumitem}
+\usepackage[inline]{enumitem}
 \usepackage{tabularx}
 \usepackage{multicol}
+\usepackage{array}
+\usepackage{gensymb}
+\usepackage{url}
+\usepackage{amsmath}
 %% The amsthm package provides extended theorem environments
 %% \usepackage{amsthm}
 
@@ -127,7 +131,7 @@
 \address{ORL-33806\\Data Driven Supply Chain Management\\Wageningen University and Research}
 
 \begin{abstract}
-%% Text of abstract
+Retailers that sell perishable products should manage their supply chain in order to have the least amount of waste or shortages as possible. A retailer in barbecue products provided data to be used during this assignment. This retailer recorded its demand on perishable products for 4 years. A model was created to simulate the operation of common retailers handling with perishable products. An attempt to improve usual demand prediction was sought after using machine learning models, which were fit with features of weather data from the Royal Dutch Meteorological Institute (KNMI).
 \end{abstract}
 
 \begin{keyword}
@@ -145,156 +149,205 @@ Data Driven Supply Chain Management \sep Machine Learning \sep Deep Learning \se
 %% main text
 \section{Introduction}
 \label{sec:introduction}
-Retailers that sell perishable products should manage their supply chain in order to have the least amount or waste or shortages as possible. A retailer in barbecue products was selected to be further investigated. This retailer recorded its demand on perishable products for 4 years. A model was created to simulate the operation of common retailers handling with perishable products. An attempt to improve usual demand prediction was sought after using machine learning models, fit with features of weather data from the Royal Dutch Meteorological Institute (KNMI), and with demand targets.
+As an assignment for the course ORL-33806, a simulation model was developed to simulate behavior of common perishable retail products. Afterwards, a machine learning estimator was used to created to predict demand, which influences the order-up-to level and order quantity.
+
+Section \ref{sec:prov_data} describes the datasets that were provided and its features. Section \ref{sec:retailer} describes how the retailer simulation model was set up. Section \ref{sec:preprocessing} describes how the dataset was preprocessed and how features were engineered. Section \ref{sec:models} describes the machine learning estimators that were used and their demand prediction scores. Section \ref{sec:qc} quantitatively compares the estimators using the retailer simulation model. Section \ref{sec:noweather} describes the impact of including weather data, and at last, section \ref{sec:conclusion} concludes on all these observations.
+
+\section{Provided datasets}
+\label{sec:prov_data}
+Datasets that were provided during this assignment were: 
+\begin{enumerate*}[label=\roman*]
+	\item \textit{Data2014-2017DemandWeather.xlsx}, 
+	\item \textit{Data2014-2016DemandWeather.xlsx}, and 
+	\item \textit{Data2017DemandWeather.xlsx}.
+\end{enumerate*}
+ 
+
+The latter two datasets were split from the first dataset in order to enable users to easily use the dataset with data from 2014 to 2016 as train data to predict the demand of 2017. The datasets were merged demand data from a retailer in barbecue products, and weather data from the same day, retrieved by the KNMI. The datasets consist of four features: 
+\begin{description}[noitemsep]
+	\item[Date] Date of sample in \textit{YYYY-mm-dd} format. Sample period is one day.
+	\item [demand] Demand of products during the sample period.
+	\item [TempTimes10] Average temperature in 0.1 \degree C during the sample period.
+	\item [RainfallTimes10] Total rainfall in 0.1 mm during the sample period.
+\end{description}
 
 \section{Retailer simulation}
+\label{sec:retailer}
 In order to investigate the operation of a common retailer of perishable products, a quantitative model was developed. This model kept in mind a daily routine:
 \begin{itemize}[]
-	\item At the start of every day, the order up to level \textit{S} will be set by predicting demand \textit{D}. There are various methods to calculate \textit{S}, which will be explained later in this section.
+	\item At the start of every day, the order-up-to level \textit{S} will be set by predicting demand \textit{D}. There are various methods to calculate \textit{S}, which will be explained later in this section.
 	\item Order quantity \textit{Q} is determined by subtracting the daily starting inventory \textit{I} from \textit{S}.
 	\item During the day, customers buy products. This demand is subtracted FIFO-wise from \textit{I}. If demand is higher than stock, a shortage is counted.
 	\item Next day starting inventory \textit{I} is determined by adding \textit{Q} to \textit{I} FIFO-wise.
-	\item Waste is computed by counting the expired products.
+	\item Waste is computed by counting the expired products, which are products that were in stock for longer than 7 days.
 	\item At the end of the iteration, average shortage and waste are computed.
 \end{itemize}
-\subsection{Determining D}
-In this simulation model, two methods of determining demand \textit{D} were implemented. The first method was simulating \textit{D}, the second was using a manual input (a \texttt{list}), which could be a predicted \textit{D} using a machine learning model.
 
-\subsection{Computation of S}
-Order up to level \textit{S} was computed by using the formula: 
+\subsection{Demand input}
+In this simulation model, two methods of demand \textit{D} input were implemented. In the first method, \textit{D} was set straight from the \texttt{Demand} feature from one of the datasets. The second method takes a more complex approach; a demand prediction model is trained using one of the datasets, hereafter, the model is able to predict demand over a certain period using weather data, which then sets \textit{D}.
+
+\subsection{Computation of the order-up-to level}
+Order-up-to level \textit{S} was computed by using the formula: 
 \begin{equation}
-S = \mu_{R+L} + z(\sigma_{R+L})
+S = \mu_{R+L}(t) + ss(t)
 \end{equation}
-Where \textit{R} means the daily ordering and \textit{L} stands for the lead time. $\mu_{R+L}$ is the demand over $R+L$ days, where $z(\sigma_{R+L})$ is a safety stock that is added to the expected demand over review period plus lead time. 
-\section{Prediction models}
-\label{sec:models}
-All demand prediction models are elaborated in this section.
-\subsection{Analysis and Choice}
-%TODO Analysis and choice of prediction models
-In order to forecast demand, several prediction models were created. These models included:
-\begin{itemize}[noitemsep]
- \item Constant demand
- \item Mean average
- \item Linear regression
- \item Decision tree regression
- \item Support vector regression
- \item Random forest regression
- \item Gradient boosting regression
- \item Multi-layer perceptron regression
-\end{itemize}
-\subsection{Parameter settings}
-%TODO Prediction model and param settings
-In order to efficiently evaluate each machine learning model, the \texttt{GridSearchCV} object from the \texttt{sklearn} library has been used. Parameters for each of these models have been shown in
-\begin{table}[b]
-\begin{tabular}{p{0.5\columnwidth}p{0.5\columnwidth}}
-\hline
-Model                             & Parameter values                                                                                                  \\ \hline
-Linear regression                 & \{'normalize': False\}                                                                                            \\
-Decision tree regression          & \{'max\_depth': 13, 'random\_state': 0\}                                                                          \\
-Support vector regression         & \{'C': 100, 'gamma': 0.01\}                                                                                       \\
-Random forest regression          & \{'max\_depth': 8, 'max\_features': 'auto', 'n\_estimators': 500, 'random\_state': 0\}                            \\
-Gradient boosting regression      & \{'learning\_rate': 0.1, 'max\_depth': 5, 'random\_state': 0\}                                                    \\
-Multi-layer perceptron regression & \{'alpha': 1e-06, 'hidden\_layer\_sizes': {[}10{]}, 'max\_iter': 1000000, 'solver': 'lbfgs, 'random\_state': 0'\} \\ \hline
-\end{tabular}
-\caption{Model Parameters}
-\label{tab:params}
+Where \textit{R} means the daily ordering and \textit{L} stands for the lead time. $\mu_{R+L}(t)$ is the mean demand over $R+L$ days, and $ss(t)$ is a safety stock that is added to the expected demand. This safety stock was set to half the prediction of $\mu_{R+L}(t)$. Therefore, order up to level is set to $S_{t} = 1.5*\mu_{R+L}(t)$.
+
+\subsection{Reference score}
+For each of the datasets, a reference score was computed, which can be seen in table \ref{tab:reference_scores}. \textit{S} with $S_{t} = 1.5*\mu_{R+L}(t)$, where $\mu_{R+L}(t)$ is the predicted demand over the current day and the day after. The demand of these days is predicted by taking the mean of the 3 preceding weekdays, which means:
+\begin{equation}
+S_{t} = 1.5(\frac{\sum_{i=1}^{3} d_{t-7i}}{3} + \dfrac{\sum_{i=1}^{3} d_{t-7i+1}}{3})
+\end{equation}
+Performance was determined by calculating the Root Mean Squared Error (RMSE), the shortage ratio (also called fill rate) and the waste ratio.
+\begin{table}[h!]
+	\begin{tabular}{llll}
+		\hline
+		Dataset (years) & RMSE & Fill Rate & Waste Rate \\ \hline
+		2014 - 2017 	& 7.22 & 0.32      & 0.12       \\
+		2014 - 2016 	& 7.55 & 0.33      & 0.13       \\
+		2017        	& 6.51 & 0.28      & 0.07       \\ \hline
+	\end{tabular}
+\caption{Reference scores of the simulation model}
+\label{tab:reference_scores}
 \end{table}
 
-\subsection{Quantitative comparison}
+\section{Preprocessing the dataset}
+\label{sec:preprocessing}
+Machine learning estimators generally use numerical data to create a useful model. The dataset which was provided, still contained categorical data - the \texttt{Data} feature - which was converted into numerical data in order to gain performance. This was achieved by converting the date into the day of the week, and then using the \texttt{pandas.get\_dummies()} function (one-hot encoding). With this conversion, the model is able to differentiate days from each other, which is very useful since people generally buy more barbecue products in the weekends.
+
+After one-hot encoding, the dataset increased from 4 to 11 features, each added feature represents a single day in the week. To add more importance to the weather combined with the day of the week, 2-degree \texttt{PolynomialFeatures} were added to the dataset, which increased the dateset to 65 features.
+
+Several of the machine learning models that were used, are sensitive to scaling. Therefore, the \texttt{StandardScaler} was used to scale all features. The \texttt{StandardScaler} ensures that the mean of every feature is 0 and that variance=1.
+
+
+\section{Prediction models}
+\label{sec:models}
+Demand prediction models that have been used within this research are elaborated in this section.
+\subsection{Analysis and Choice}
+In order to forecast demand, several prediction models were created. To achieve relevant predictions with numerical, continuous output, machine learning models used their regression variant. Choosing the right estimator may be a difficult path. Fortunately, sklearn provided a useful schematic to validate the usage of the correct estimators \cite{sklearn estimator choice}, which has been used next to the skills gained during the course. Estimators that were researched are:
+\begin{itemize}[noitemsep]
+ \item Ordinarily Least Squares
+ \item Lasso regression
+ \item Decision tree regression
+ \item Linear support vector regression (SVR)
+ \item Random forest regression
+ \item Multi-layer perceptron regression (MLP)
+\end{itemize}
+Linear regression is a very powerful estimator in high-dimensional datasets, and with its L1-regularization, Lasso could probably be an even more powerful estimator since the dataset has many features gained from the one-hot encoding and 2-degree polynomials. 
+
+Furthermore, a decision tree regressor could be higly valuable due to its conditional explainability. Random forest regression was also taken into account due to this benefit.
+
+At last, multi-layer perceptron regression was researched due to it being the main convolutional neural network discussed during the course. When using this model, it was noticeable how powerful it is, with its only big downside being its explainability.
+\subsection{Parameter settings}
+In order to efficiently evaluate each machine learning model, the \texttt{GridSearchCV} object from the \texttt{sklearn} library has been used. \texttt{GridSearchCV} allows users to provide an estimator and a range of parameter settings, which optimum values will then be determined. 
+
+Table \ref{tab:params} shows every model, its optimal parameter and its scores on train and test data for predicting demand using temperature and precipitation data. Train data is represented by the dataset containing data from 2014 to 2016, while the test dataset contains data from 2017. 
+
+The models discussed seem to achieve similar scores, except from the decision tree and random forest regression. Therefore, these models were not further tweaked to be implemented in the simulation model.
+
+\begin{table}[!b]
+	\begin{tabular}{>{\raggedright}p{0.5\columnwidth}>{\raggedright\arraybackslash}p{0.8\columnwidth}>{\raggedright\arraybackslash}p{0.3\columnwidth}>{\raggedright\arraybackslash}p{0.3\columnwidth}}
+		\hline
+		Model                             & Parameter values                                                                                                  & Score (train, test) & RMSE (train, test) \\ \hline
+		Linear regression                 & \{'normalize': False\}                                                                                            & (1,1)               & (0,0)              \\
+		Lasso regression                  & \{'alpha': 0.0001\}                                                                                               & (1,1)               & (0,0)              \\
+		Ridge regression                  & \{'alpha': 1e-07\}                                                                                                & (1,1)               & (0,0)              \\
+		Linear support vector regression  & \{'C': 100\}                                                                                                      & (1,1)               & (0,0)              \\
+		Decision tree regression          & \{'criterion': 'mse', 'max\_depth': None, 'random\_state': 0\}                                                    & (1, 0.99)           & (0, 0.228)         \\
+		Random forest regression          & \{'max\_depth': 8, 'max\_features': 'auto', 'n\_estimators': 500, 'random\_state': 0\}                            & (1,1)               & (0.196,0.189)      \\
+		Multi-layer perceptron regression & \{'alpha': 1e-06, 'hidden\_layer\_sizes': {[}10{]}, 'max\_iter': 1000000, 'solver': 'lbfgs, 'random\_state': 0'\} & (1,1)               & (0,0)              \\ \hline
+		
+	\end{tabular}
+	\caption{Model parameters and their scores on predicting demand using temperature and precipitation data.}
+	\label{tab:params}
+\end{table}
+
+\section{Quantitative comparison with the simulation model}
+\label{sec:qc}
 %TODO Quantitative comparison of the models
+The linear and MLP regression models were further investigated by scoring them on the retailer simulation model.
 
-\subsection{Impact of including weather info}
-%TODO Discuss impact of including weather info
+Order-up-to level \textit{S} was calculated by the formula $S_{t} = ss(t)*\mu_{R+L}(t)$ where $\mu_{R+L}(t)$ is the demand predicted by the estimator of that current day, $D(t)$, and the day after, $D(t+1)$, which means:
+\begin{equation}
+S_{t} = ss(t)*(D(t)+D(t+1)
+\end{equation}
+Furthermore, $ss(t)$ had a default value of \textit{1.5}, but a value to optimize the scores was sought after. One risky effect could be overfitting, which should be avoided at all cost. The results of this research can be found in table \ref{tab:quantitative}
+\begin{table}[!h]
+	\begin{tabular}{>{\raggedright}p{0.3\columnwidth}p{0.15\columnwidth}p{0.15\columnwidth}p{0.2\columnwidth}}
+		\hline
+		Model                & RMSE & Fill Rate & Waste rate \\ \hline
+		Linear    & 0    & 0         & 0.011586   \\
+		Lasso     & 0    & 0         & 0.011560   \\
+		Ridge     & 0    & 0         & 0.011586   \\
+		Linear SVR & 0    & 0         & 0.011586   \\
+		MLP       & 0    & 0         & 0.011540   \\ \hline
+	\end{tabular}
+\caption{Optimized models and their scores when used as input data to calculate \textit{S}. $ss(t)=1.5$}
+\label{tab:quantitative}
+\end{table}
 
-\section{Results}
-\label{sec:results}
-%TODO Model reports on RMSE on train and test set
-%TODO report relative fill and waste rate
+\begin{table}[!h]
+	\begin{tabular}{>{\raggedright}p{0.3\columnwidth}p{0.15\columnwidth}p{0.15\columnwidth}p{0.2\columnwidth}}
+		\hline
+		Model                & RMSE & Fill Rate & Waste rate \\ \hline
+		Linear    & 0    & 0         & 0.000658   \\
+		Lasso     & 0    & 0         & 0.000649   \\
+		Ridge     & 0    & 0         & 0.000658   \\
+		Linear SVR & 0    & 0         & 0.000658   \\
+		MLP       & 0    & 0         & 0.000636   \\ \hline
+	\end{tabular}
+	\caption{Optimized models and their scores when used as input data to calculate \textit{S}. $ss(t)=1.1$}
+	\label{tab:quantitative1}
+\end{table}
+\newpage
+After carefully investigating the values of the waste rate, $ss(t)=1.1$ was the optimal value of the safety stock. Furthermore, it can be observed that Lasso and MLP had the lowest waste rate.
+
+\section{Impact of not including weather data}
+\label{sec:noweather}
+In order to review the importance of weather data, the models were retrained and preprocessed. However, this time when preprocessing, weather features were dropped out of the dataset. Table \ref{tab:noweather} shows the scores of each model. It is clear that differences for many of the models are not visible. However, Lasso and MLP show a negative difference.
+\begin{table}[!h]
+	\begin{tabular}{>{\raggedright}p{0.3\columnwidth}p{0.15\columnwidth}p{0.15\columnwidth}p{0.2\columnwidth}}
+		\hline
+		Model                & RMSE & Fill Rate & Waste rate \\ \hline
+		Linear    & 0    & 0         & 0.011586   \\
+		Lasso     & 0    & 0         & 0.011575   \\
+		Ridge     & 0    & 0         & 0.011586   \\
+		Linear SVR & 0    & 0         & 0.011586   \\
+		MLP       & 0    & 0         & 0.011579   \\ \hline
+	\end{tabular}
+	\caption{Optimized models and their scores when used as input data to calculate \textit{S}, this time trained without weather data. $ss(t)=1.5$}
+	\label{tab:noweather}
+\end{table}
 
 \section{Conclusions and Recommendations}
 \label{sec:conclusion}
+From the results observed in tables \ref{tab:quantitative} to \ref{tab:noweather}, it can be concluded that Lasso and MLP are the best regression models to determine \textit{D}. Furthermore, $ss(t)=1.1$ and including weather data provides the best scores. If a model must be explainable, Lasso regression would be the estimator of choice. Otherwise, MLP would be chosen due to its higher scores. Lasso's L1-regularization means that many of its features are set to zero, meaning it can be written down like:
+\begin{equation}
+\begin{split}
+D_{predicted} = 2.22 + 0.407x_{0} - 0.502x_{1} + 0.003x_{9}\\ 
+					 + 1.100x_{11} + 0.992x_{12} + 1.088x_{13}\\
+					 + 1.326x_{14} + 1.805x_{15} + 2.198x_{16}\\
+					 + 1.375x_{17} - 0.313x_{19} - 0.311x_{20}\\
+					 - 0.313x_{21} - 0.318x_{22} - 0.317x_{23}\\
+					 - 0.315x_{24} - 0.311x_{25} + 0.214x_{26}\\
+					 + 0.174x_{27} + 0.175x_{28} + 0.263x_{29}\\
+					 + 0.229x_{30} + 0.177x_{31} + 0.218x_{32}\\
+\end{split}
+\end{equation}
+Here, every \textit{x} represents a feature column. Another 30 features are set to 0, which means that some of the features were unimportant.
 
+It can be observed that with using either of these simulation methods, no shortage is occurring anymore, and waste is greatly reduced when comparing with the reference scores from table \ref{tab:reference_scores}.
 
+When starting to predict demand, using $ss(t)=1.5$ should be a safe start and only start reducing $ss(t)$ after a certain time, if comfortable. 
 
-%% The Appendices part is started with the command \appendix;
-%% appendix sections are then done as normal sections
-%% \appendix
+\begin{thebibliography}{2}
 
-%% \section{}
-%% \label{}
+\bibitem[(Muller \& Guido, 2016)]{muller}
+Muller, A. C., \& Guido, S. (2016). Introduction to Machine Learning with Python: A Guide for Data Scientists (1st ed.). Culemborg, Netherlands: Van Duuren Media.
 
-%% References
-%%
-%% Following citation commands can be used in the body text:
-%%
-%%  \citet{key}  ==>>  Jones et al. (1990)
-%%  \citep{key}  ==>>  (Jones et al., 1990)
-%%
-%% Multiple citations as normal:
-%% \citep{key1,key2}         ==>> (Jones et al., 1990; Smith, 1989)
-%%                            or  (Jones et al., 1990, 1991)
-%%                            or  (Jones et al., 1990a,b)
-%% \cite{key} is the equivalent of \citet{key} in author-year mode
-%%
-%% Full author lists may be forced with \citet* or \citep*, e.g.
-%%   \citep*{key}            ==>> (Jones, Baker, and Williams, 1990)
-%%
-%% Optional notes as:
-%%   \citep[chap. 2]{key}    ==>> (Jones et al., 1990, chap. 2)
-%%   \citep[e.g.,][]{key}    ==>> (e.g., Jones et al., 1990)
-%%   \citep[see][pg. 34]{key}==>> (see Jones et al., 1990, pg. 34)
-%%  (Note: in standard LaTeX, only one note is allowed, after the ref.
-%%   Here, one note is like the standard, two make pre- and post-notes.)
-%%
-%%   \citealt{key}          ==>> Jones et al. 1990
-%%   \citealt*{key}         ==>> Jones, Baker, and Williams 1990
-%%   \citealp{key}          ==>> Jones et al., 1990
-%%   \citealp*{key}         ==>> Jones, Baker, and Williams, 1990
-%%
-%% Additional citation possibilities
-%%   \citeauthor{key}       ==>> Jones et al.
-%%   \citeauthor*{key}      ==>> Jones, Baker, and Williams
-%%   \citeyear{key}         ==>> 1990
-%%   \citeyearpar{key}      ==>> (1990)
-%%   \citetext{priv. comm.} ==>> (priv. comm.)
-%%   \citenum{key}          ==>> 11 [non-superscripted]
-%% Note: full author lists depends on whether the bib style supports them;
-%%       if not, the abbreviated list is printed even when full requested.
-%%
-%% For names like della Robbia at the start of a sentence, use
-%%   \Citet{dRob98}         ==>> Della Robbia (1998)
-%%   \Citep{dRob98}         ==>> (Della Robbia, 1998)
-%%   \Citeauthor{dRob98}    ==>> Della Robbia
-
-
-%% References with bibTeX database:
-
-%\bibliographystyle{elsarticle-harv}
-%\bibliography{<your-bib-database>}
-
-%% Authors are advised to submit their bibtex database files. They are
-%% requested to list a bibtex style file in the manuscript if they do
-%% not want to use elsarticle-harv.bst.
-
-%% References without bibTeX database:
-
-% \begin{thebibliography}{00}
-
-%% \bibitem must have one of the following forms:
-%%   \bibitem[Jones et al.(1990)]{key}...
-%%   \bibitem[Jones et al.(1990)Jones, Baker, and Williams]{key}...
-%%   \bibitem[Jones et al., 1990]{key}...
-%%   \bibitem[\protect\citeauthoryear{Jones, Baker, and Williams}{Jones
-%%       et al.}{1990}]{key}...
-%%   \bibitem[\protect\citeauthoryear{Jones et al.}{1990}]{key}...
-%%   \bibitem[\protect\astroncite{Jones et al.}{1990}]{key}...
-%%   \bibitem[\protect\citename{Jones et al., }1990]{key}...
-%%   \harvarditem[Jones et al.]{Jones, Baker, and Williams}{1990}{key}...
-%%
-
-% \bibitem[ ()]{}
-
-% \end{thebibliography}
+\bibitem[(“Choosing the right estimator — scikit-learn 0.22.1 documentation,” n.d.)]{sklearn estimator choice}
+Choosing the right estimator — scikit-learn 0.22.1 documentation. (n.d.). Retrieved February 1, 2020, from \path{https://scikit-learn.org/stable/tutorial/machine_learning_map/index.html}
+\end{thebibliography}
 
 \end{document}
 

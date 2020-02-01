@@ -13,17 +13,16 @@ from math import sqrt
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, SGDRegressor
-from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import GridSearchCV
 from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.svm import LinearSVR
+from sklearn.tree import DecisionTreeRegressor
 
-from demand_forecast_simulator import DemandForecastSimulator
+from src.demand_forecast_simulator import DemandForecastSimulator
 
 
 def ignore_warnings():
@@ -62,7 +61,7 @@ def run_sim_datasets(dataframes, plot=False):
         TO = df.shape[0] - TW - TK
         fs.set_D(df.demand, 1, TO)
         D, S, Q, I, short, waste, ShortRun, WasteRun = fs.simulate(1, TO)
-        print('\n--- %s ---'%names)
+        print('\n--- %s ---' % names)
         report_rmse_fillrun_shortrun(D[0], S[0], ShortRun, WasteRun)
 
         if plot:
@@ -84,9 +83,9 @@ def report_rmse_fillrun_shortrun(D, S, ShortRun, WasteRun):
     :param WasteRun: waste rate
     :return: None
     """
-    print('RMSE\t\t: \t%0.3f' % sqrt(mean_squared_error(D, S)))
-    print('Fill rate\t: \t%0.3f' % ShortRun)
-    print('Waste rate\t: \t%0.3f' % WasteRun)
+    print('RMSE\t\t: \t%f' % sqrt(mean_squared_error(D, S)))
+    print('Fill rate\t: \t%f' % ShortRun)
+    print('Waste rate\t: \t%f' % WasteRun)
 
 
 def preprocess_train_test(train_df, test_df):
@@ -160,23 +159,19 @@ def evaluate_models(train_df, test_df):
     X_train_scaled, y_train, X_test_scaled, y_test = preprocess_train_test(train_df, test_df)
 
     # Apply Gridsearch method to find the best parameters and their RMSE
-    models = [LinearRegression(), Ridge(), Lasso(), SGDRegressor(), 
-              GaussianNB(), DecisionTreeRegressor(), LinearSVR(), 
-              RandomForestRegressor(), GradientBoostingRegressor(), 
+    models = [LinearRegression(), Lasso(), Ridge(), LinearSVR(),
+              DecisionTreeRegressor(), RandomForestRegressor(),
               MLPRegressor()]
-    
+
     parameters = [{'normalize': [False, True]},
-                   {'alpha': [0.0001, 0.00001, 1, 10]},
-                   {'alpha': [0.0001, 0.00001, 1, 10]},
-                   {'alpha': [0.0000001, 0.00001, 0.0001, 0.001]},
-                   {},
-                  {'max_depth': [1, 3, 5, 13, 20, None], 'random_state': [0]},
+                  {'alpha': [0.0001, 0.00001, 1, 10]},
+                  {'alpha': [0.0000001, 0.00001, 0.0001, 0.001]},
                   {'C': [0.001, 0.1, 10, 100]},
+                  {'criterion': ['mse', 'friedman_mse', 'mae'], 'max_depth': [None], 'random_state': [0]},
                   {'n_estimators': [100, 200, 500], 'max_features': ['auto', 'sqrt', 'log2'],
                    'max_depth': [2, 3, 4, 5, 6, 7, 8], 'random_state': [0]},
-                  {'learning_rate': [0.001, 0.01, 0.1, 1, 10], 'max_depth': [1, 3, 5], 'random_state': [0]},
                   {'solver': ['adam', 'lbfgs', 'sgd'], 'hidden_layer_sizes': [[10], [10, 10], [10, 10, 10]],
-                   'alpha': [0.000001, 0.00001, 0.0001], 'random_state': [0], 'max_iter':[1000000]}]
+                   'alpha': [0.000001, 0.00001, 0.0001], 'random_state': [0], 'max_iter': [1000000]}]
 
     for model, params in zip(models, parameters):
         grid = GridSearchCV(model, param_grid=params, cv=5, n_jobs=-1)
@@ -207,7 +202,7 @@ def run_sim_ml_dataset(model, dataframe, plot=False):
     X, y = preprocess_train(dataframe)
     model.fit(X, y)
     demand = model.predict(X)
-    
+
     # Initialize ForecastSimulator model
     fs = DemandForecastSimulator('ML', ss=1.1)
     fs.set_D(demand, 1, TO)
@@ -230,7 +225,7 @@ if __name__ == '__main__':
     ignore_warnings()
 
     # Adjust current working directory if needed
-    set_cwd()
+    # set_cwd()
 
     # Load data into dataframes
     demand_weather_14_17 = pd.read_excel('data/Data2014-2017DemandWeather.xlsx')
@@ -247,18 +242,19 @@ if __name__ == '__main__':
     evaluate_models(demand_weather_14_16, demand_weather_17)
 
     print('\n\n---- Run the Simulator ----')
-    # MLP and Linear models performed rather good on evaluate_models, therefore we test them on the simulation
-    mlp = MLPRegressor(alpha=0.00001, hidden_layer_sizes=[10], random_state=0, solver='lbfgs')
+    # MLP and Linear models performed rather good on evaluate_models, therefore we test them on the simulation using
+    # the parameters that we gained from the model evaluation
+    mlp = MLPRegressor(alpha=1e-6, hidden_layer_sizes=[10], random_state=0, solver='lbfgs', max_iter=1000000)
     lr = LinearRegression()
     lasso = Lasso(alpha=0.0001)
-    ridge = Ridge(alpha=1e-5)
-    svr = LinearSVR(C = 100)
+    ridge = Ridge(alpha=1e-7)
+    svr = LinearSVR(C=100)
     models = [lr, lasso, ridge, svr, mlp]
     for model in models:
         run_sim_ml_dataset(model, demand_weather_14_17, plot=False)
 
 # =============================================================================
-# With a ss=1.1, all models score the same. Therefore, I would use Lasso 
+# With a ss=1.1, MLP and Lasso score best. Therefore, I would use Lasso
 # regression, which has most feature coefficients on 0 and is easily 
 # explainable.
 # =============================================================================

@@ -16,6 +16,7 @@ class DemandForecastSimulator:
     The Demand Forecast Simulator, a simulator that takes perishable items into account.
     Simply set demand and call the simulate() function.
     """
+
     def __init__(self, model, shelf_life=7, I0=0, review_p=1, lead_time=1, z=1, TW=30, TK=7, ss=1.5, mu=2):
         """
         Initialize the DemandForecastSimulator
